@@ -1,3 +1,4 @@
+use std::cmp::max;
 
 const MAX_RED_CUBES: i32 = 12;
 const MAX_GREEN_CUBES: i32 = 13;
@@ -6,14 +7,20 @@ const MAX_BLUE_CUBES: i32 = 14;
 fn main() {
     let input = include_str!("./input.txt");
 
+    let games = input.lines().map(|line| parse_input_line(line)).collect::<Vec<Game>>();
+
     println!(
         "Sum of possible game IDs: {}",
-        sum_possible_game_ids(input, MAX_RED_CUBES, MAX_BLUE_CUBES, MAX_GREEN_CUBES)
+        sum_possible_game_ids(&games, MAX_RED_CUBES, MAX_BLUE_CUBES, MAX_GREEN_CUBES)
+    );
+    println!(
+        "Sum of games min power: {}",
+        sum_games_min_power(&games)
     );
 }
 
 #[derive(Eq, PartialEq, Debug)]
-struct GameRound {
+struct DiceSet {
     num_red_cubes: i32,
     num_green_cubes: i32,
     num_blue_cubes: i32,
@@ -21,8 +28,30 @@ struct GameRound {
 
 struct Game {
     id: i32,
-    rounds: Vec<GameRound>,
+    rounds: Vec<DiceSet>,
 }
+
+impl Game {
+    fn min_power(&self) -> i32 {
+        let mut min_dice_set = DiceSet { num_red_cubes: 0, num_blue_cubes: 0, num_green_cubes: 0 };
+
+        for round in &self.rounds {
+            min_dice_set.num_red_cubes = max(min_dice_set.num_red_cubes, round.num_red_cubes);
+            min_dice_set.num_green_cubes = max(min_dice_set.num_green_cubes, round.num_green_cubes);
+            min_dice_set.num_blue_cubes = max(min_dice_set.num_blue_cubes, round.num_blue_cubes);
+        }
+
+        min_dice_set.num_red_cubes * min_dice_set.num_green_cubes * min_dice_set.num_blue_cubes
+    }
+}
+
+#[test]
+fn test_min_power() {
+    let input = "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green";
+    let game = parse_input_line(input);
+    assert_eq!(game.min_power(), 48);
+}
+
 
 fn parse_input_line(input: &str) -> Game {
     let mut game = Game { id: 0, rounds: Vec::new() };
@@ -32,7 +61,7 @@ fn parse_input_line(input: &str) -> Game {
     game.id = game_split[1].parse::<i32>().unwrap();
 
     for round in split[1].split(';') {
-        let mut game_round = GameRound { num_red_cubes: 0, num_blue_cubes: 0, num_green_cubes: 0 };
+        let mut game_round = DiceSet { num_red_cubes: 0, num_blue_cubes: 0, num_green_cubes: 0 };
         for cube in round.split(',') {
             let cube_split: Vec<&str> = cube.trim().split(' ').collect();
             let num_cubes = cube_split[0].parse::<i32>().unwrap();
@@ -55,9 +84,9 @@ fn test_parse_input_line() {
     let game = parse_input_line(input);
     assert_eq!(game.id, 1);
     assert_eq!(game.rounds.len(), 3);
-    assert_eq!(game.rounds[0], GameRound { num_red_cubes: 4, num_blue_cubes: 3, num_green_cubes: 0 });
-    assert_eq!(game.rounds[1], GameRound { num_red_cubes: 1, num_blue_cubes: 6, num_green_cubes: 2 });
-    assert_eq!(game.rounds[2], GameRound { num_red_cubes: 0, num_blue_cubes: 0, num_green_cubes: 2 });
+    assert_eq!(game.rounds[0], DiceSet { num_red_cubes: 4, num_blue_cubes: 3, num_green_cubes: 0 });
+    assert_eq!(game.rounds[1], DiceSet { num_red_cubes: 1, num_blue_cubes: 6, num_green_cubes: 2 });
+    assert_eq!(game.rounds[2], DiceSet { num_red_cubes: 0, num_blue_cubes: 0, num_green_cubes: 2 });
 }
 
 fn check_game_possible(game: &Game, max_red_cubes: i32, max_blue_cubes: i32, max_green_cubes: i32) -> bool {
@@ -90,11 +119,10 @@ fn test_inpossible_game() {
     assert_eq!(check_game_possible(&game, 4, 6, 1), false);
 }
 
-fn sum_possible_game_ids(input: &str, max_red_cubes: i32, max_blue_cubes: i32, max_green_cubes: i32) -> i32 {
+fn sum_possible_game_ids(games: &[Game], max_red_cubes: i32, max_blue_cubes: i32, max_green_cubes: i32) -> i32 {
     let mut result = 0;
 
-    for line in input.lines() {
-        let game = parse_input_line(line);
+    for game in games {
         if check_game_possible(&game, max_red_cubes, max_blue_cubes, max_green_cubes) {
             result += game.id;
         }
@@ -104,7 +132,25 @@ fn sum_possible_game_ids(input: &str, max_red_cubes: i32, max_blue_cubes: i32, m
 }
 
 #[test]
-fn test_round_1_example() {
+fn test_part_1_example() {
     let input = include_str!("./example1.txt");
-    assert_eq!(sum_possible_game_ids(input, 12, 13, 14), 8);
+    let games = input.lines().map(|line| parse_input_line(line)).collect::<Vec<Game>>();
+    assert_eq!(sum_possible_game_ids(&games, 12, 13, 14), 8);
+}
+
+fn sum_games_min_power(games: &[Game]) -> i32 {
+    let mut result = 0;
+
+    for game in games {
+        result += game.min_power();
+    }
+
+    result
+}
+
+#[test]
+fn test_part_2_example() {
+    let input = include_str!("./example1.txt");
+    let games = input.lines().map(|line| parse_input_line(line)).collect::<Vec<Game>>();
+    assert_eq!(sum_games_min_power(&games), 2286);
 }
