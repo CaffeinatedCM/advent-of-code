@@ -10,6 +10,7 @@ fn main() {
 
 #[derive(Eq, PartialEq, Debug, PartialOrd, Ord, Copy, Clone)]
 enum Card {
+    Joker,
     Two,
     Three,
     Four,
@@ -19,7 +20,6 @@ enum Card {
     Eight,
     Nine,
     Ten,
-    Jack,
     Queen,
     King,
     Ace
@@ -52,12 +52,19 @@ impl Hand {
             card_counts[*card as usize] += 1;
         }
 
+        // Take the joker count then sort the rest
+        let joker_count = card_counts[0];
+        let mut without_joker = card_counts.iter().skip(1).map(|x| *x).collect::<Vec<i32>>();
+        without_joker.sort();
+        without_joker.reverse();
+        without_joker[0] += joker_count;
+
         let mut pair_count = 0;
         let mut three_of_a_kind = false;
         let mut four_of_a_kind = false;
         let mut five_of_a_kind = false;
 
-        for count in card_counts.iter() {
+        for count in without_joker.iter() {
             match count {
                 2 => pair_count += 1,
                 3 => three_of_a_kind = true,
@@ -100,6 +107,7 @@ impl FromStr for Hand {
 
         for (i, card) in card_str.enumerate() {
             cards[i] = match card {
+                'J' => Card::Joker,
                 '2' => Card::Two,
                 '3' => Card::Three,
                 '4' => Card::Four,
@@ -109,7 +117,6 @@ impl FromStr for Hand {
                 '8' => Card::Eight,
                 '9' => Card::Nine,
                 'T' => Card::Ten,
-                'J' => Card::Jack,
                 'Q' => Card::Queen,
                 'K' => Card::King,
                 'A' => Card::Ace,
@@ -148,10 +155,10 @@ fn test_hand_sort() {
 
     assert_eq!(sorted, vec![
         Hand::from_str("32T3K 765").unwrap(),
-        Hand::from_str("KTJJT 220").unwrap(),
         Hand::from_str("KK677  28").unwrap(),
         Hand::from_str("T55J5 684").unwrap(),
         Hand::from_str("QQQJA 483").unwrap(),
+        Hand::from_str("KTJJT 220").unwrap(),
     ]);
 }
 
@@ -174,5 +181,5 @@ fn total_winnings(mut hands: Vec<Hand>) -> i32 {
 fn test_total_winnings() {
     let input = include_str!("./example1.txt");
     let hands = parse_input(input);
-    assert_eq!(total_winnings(hands), 6440);
+    assert_eq!(total_winnings(hands), 5905);
 }
