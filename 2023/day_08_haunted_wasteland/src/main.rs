@@ -5,6 +5,7 @@ fn main() {
     let map = parse_input(input);
 
     println!("Steps: {}", traverse(&map));
+    println!("Ghost Steps: {}", ghost_traverse(&map));
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -67,7 +68,6 @@ fn traverse(map: &Map) -> i32 {
 
     loop {
         let instruction = map.instructions[steps as usize % map.instructions.len()];
-        println!("{}: {:?} -> {:?}", steps, instruction, current);
 
         match instruction {
             'R' => {
@@ -111,4 +111,59 @@ fn test_traverse_looping() {
     let map = parse_input(input);
 
     assert_eq!(traverse(&map), 6);
+}
+
+// Oh no, it's slow as fuck
+fn ghost_traverse(map: &Map) -> i64 {
+    let mut current_nodes = map.network.iter().filter(|n| n.0.ends_with("A")).map(|x| x.1).collect::<Vec<&Node>>();
+    let mut steps = 0_i64;
+
+    println!("Starting Nodes: {:?}", current_nodes);
+    loop {
+        let mut next_nodes = Vec::new();
+        let instruction = map.instructions[steps as usize % map.instructions.len()];
+
+        for current_node in &current_nodes {
+            match instruction {
+                'R' => {
+                    if let Some(right) = &current_node.right {
+                        next_nodes.push(map.network.get(right).unwrap());
+                    } else {
+                       panic!("No right node found for {:?}", current_node)
+                    }
+                },
+                'L' => {
+                    if let Some(left) = &current_node.left {
+                        next_nodes.push(map.network.get(left).unwrap());
+                    } else {
+                        panic!("No left node found for {:?}", current_node)
+                    }
+                },
+                _ => panic!("Unknown instruction: {}", instruction),
+            }
+        }
+
+        steps += 1;
+
+        if next_nodes.iter().all(|n| n.id.ends_with("Z")) {
+            break;
+        }
+
+        if (steps % 100000) == 0 {
+            println!("Steps: {}, Nodes: {:?}", steps, next_nodes);
+        }
+
+        current_nodes.clear();
+        current_nodes.extend(next_nodes);
+    }
+
+    steps
+}
+
+#[test]
+fn test_ghost_traverse() {
+    let input = include_str!("./example3.txt");
+    let map = parse_input(input);
+
+    assert_eq!(ghost_traverse(&map), 6);
 }
