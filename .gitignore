@@ -1,1 +1,6 @@
 input.txt
+target/
+debug/
+
+**/*.rs.bk
+Cargo.lock
