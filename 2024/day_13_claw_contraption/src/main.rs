@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use regex::{Regex};
+use regex::Regex;
 
 const A_COST: i64 = 3;
 const B_COST: i64 = 1;
@@ -11,13 +11,19 @@ fn main() {
 
     let input_str = std::fs::read_to_string(input_file).unwrap();
     let machines = parse_input(&input_str);
-    println!("{:?}", machines);
     let total_cost = calculate_total_cost(&machines);
     println!("Total cost: {}", total_cost);
-    let machines_part_two = machines.clone().into_iter().map(|mut machine| {
-        machine.prize = (machine.prize.0 + 10000000000000, machine.prize.1 + 10000000000000);
-        machine
-    }).collect::<Vec<_>>();
+    let machines_part_two = machines
+        .clone()
+        .into_iter()
+        .map(|mut machine| {
+            machine.prize = (
+                machine.prize.0 + 10000000000000,
+                machine.prize.1 + 10000000000000,
+            );
+            machine
+        })
+        .collect::<Vec<_>>();
     let total_cost_part_two = calculate_total_cost(&machines_part_two);
     println!("Total cost part two: {}", total_cost_part_two);
 }
@@ -77,50 +83,25 @@ fn parse_input(input: &str) -> Vec<ClawMachine> {
 }
 
 fn calculate_total_cost(machines: &Vec<ClawMachine>) -> i64 {
-    machines.par_iter().map(|machine| {
-        let cost = calculate_cost(machine);
-        println!("Cost: {}", cost);
-        cost
-    }).sum::<i64>()
+    machines
+        .par_iter()
+        .map(|machine| {
+            let cost = calculate_cost(machine);
+            cost
+        })
+        .sum::<i64>()
 }
 
-// Return cost if the machine is able to grab the prize, otherwise return 0
+// Oh duh, I can just do math
 fn calculate_cost(machine: &ClawMachine) -> i64 {
-    // FIgure out maximum number of B presses
-    let b_x_presses = machine.prize.0 / machine.b.0;
-    let b_y_presses = machine.prize.1 / machine.b.1;
-    let max_b_presses = b_x_presses.min(b_y_presses);
-
-    // Figure out how many A presses are needed
-    // If it can't with A presses, subtract B presses and try again
-    // If it still can't, return 0
-    let mut b_presses = max_b_presses;
-    let mut a_presses = 0;
-    println!("Max B presses: {}", max_b_presses);
-
-    while b_presses >= 0 {
-        let remaining_x = machine.prize.0 - b_presses * machine.b.0;
-        let remaining_y = machine.prize.1 - b_presses * machine.b.1;
-
-        let a_x_presses = remaining_x / machine.a.0;
-        let a_y_presses = remaining_y / machine.a.1;
-        let max_a_presses = a_x_presses.min(a_y_presses);
-        
-        if remaining_x - max_a_presses * machine.a.0 == 0 && remaining_y - max_a_presses * machine.a.1 == 0 {
-            a_presses = max_a_presses;
-            break;
-        }
-
-        b_presses -= 1;
-    }
-    println!("A presses: {}, B presses: {}", a_presses, b_presses);
-
-    if a_presses < 0 || b_presses < 0 {
-        println!("0");
+    let b = (machine.prize.1 * machine.a.0 - machine.prize.0 * machine.a.1)
+        / (machine.b.1 * machine.a.0 - machine.b.0 * machine.a.1);
+    let a = (machine.prize.0 - b * machine.b.0) / machine.a.0;
+    if machine.a.0 * a + machine.b.0 * b != machine.prize.0
+        || machine.a.1 * a + machine.b.1 * b != machine.prize.1
+    {
         return 0;
     }
 
-    println!("Cost: {}", a_presses * A_COST + b_presses * B_COST);
-    a_presses * A_COST + b_presses * B_COST
+    a * A_COST + b * B_COST
 }
-
